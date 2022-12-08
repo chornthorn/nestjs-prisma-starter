@@ -12,15 +12,13 @@
 
 ## Requirements Environment
 
-- Docker engine
-- Docker compose
+- Docker ( Docker engine, Docker compose ) (https://docs.docker.com/get-docker)
 - Node.js 17 or higher
-- Visual Studio Code or other IDE
 - Postman or other API client
-- Chrome or other browser
 
 ## Installation
 
+- Go to the project folder
 - Run command below to install dependencies
 
 ```bash
