@@ -39,6 +39,15 @@ $ npm run app:dev
 
 ```
 
+## Application Port
+
+- Nest app: 3005 - http://localhost:3005/api
+- Postgres: 5432 (default)
+    - database_url: postgres://postgres:postgres@db:5432/postgres
+- PgAdmin: 5050 - http://localhost:5050
+    - Email: admin@admin.com
+    - Password: admin
+
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If
