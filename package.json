@@ -19,10 +19,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:run": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+    "docker:dev": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
     "db:migrate": "docker exec -it kun5g-app npx prisma migrate dev --name=$npm_config_name",
     "db:push": "docker exec -it kun5g-app npx prisma migrate dev",
-    "app:log": "docker logs kun5g-app -f"
+    "app:log": "docker logs kun5g-app -f",
+    "app:dev": "npm run docker:dev && npm run db:push && npm run app:log"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
