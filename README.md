@@ -45,6 +45,8 @@ $ npm run app:dev
 - PgAdmin: 5050 - http://localhost:5050
     - Email: admin@admin.com
     - Password: admin
+- Postman simple
+  collection: [Download Collections](https://github.com/chornthorn/nestjs-prisma-starter/tree/main/Postman)
 
 ## Support
 
