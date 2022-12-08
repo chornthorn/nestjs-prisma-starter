@@ -22,6 +22,8 @@
 - Run command below to install dependencies
 
 ```bash
+$ cp .env.simple .env
+
 $ npm install
 ```
 
@@ -34,7 +36,6 @@ $ npm install
 ```bash
 # development
 $ npm run app:dev
-
 ```
 
 ## Application Port
