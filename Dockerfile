@@ -1,4 +1,4 @@
-# pull node 16 image for creating two stage of app
+# pull node 17 image for creating two stage of app
 FROM node:17 AS development
 
 #FROM alpine as development
@@ -25,7 +25,7 @@ COPY . .
 RUN npm run build
 
 # build another image named production
-FROM node:16 as production
+FROM node:17 as production
 
 # set node environment to production
 ARG NODE_ENV=production
