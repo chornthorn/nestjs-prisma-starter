@@ -1,0 +1,73 @@
+version: "3.9"
+
+# The services of nestjs application build with dockerfile
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # only will be build development stage
+      # target: development
+    container_name: kun5g-app
+    # mount the source code to container
+    # mount current directory to /usr/src/app
+    # reflect the changes in the source code to the container
+    volumes:
+      - .:/usr/src/app
+    #      - ./node_modules:/usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15
+    container_name: kun5g-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # database pgadmin
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: kun5g-pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    networks:
+      - app-network
+
+volumes:
+  db-data:  # volume for database data
+
+networks:
+  app-network:  # network for app and db
+
+# Now, we can run the docker-compose command to start the application.
+# docker-compose up -d --build
+# docker-compose down -v
+# rebuild the docker image
+# docker-compose up -d --build --force-recreate
+
+# rebuild by deleting the old image and creating a new one
+# docker-compose up -d --build --force-recreate --no-cache
+
+
+# run migration command in docker container
+# docker-compose exec app npm run typeorm:run-migrations
+

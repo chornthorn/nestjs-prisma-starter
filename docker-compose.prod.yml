@@ -1,0 +1,7 @@
+services:
+  app:
+    build: 
+      target: production
+    command: npm run start:prod
+    ports:
+      - "8000:3000"
