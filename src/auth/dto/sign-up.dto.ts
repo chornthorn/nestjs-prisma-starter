@@ -1,12 +1,38 @@
-import { IsNotEmpty, IsString } from 'class-validator';
-import { SignInDto } from './sign-in.dto';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Gender, Role, Status } from '@prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
 
-export class SignUpDto extends SignInDto {
+export class SignUpDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  firstName: string;
+  username: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  lastName: string;
+  password: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  fullNameEn: string;
+
+  @ApiProperty()
+  @IsString()
+  fullNameKh: string;
+
+  @ApiProperty({ enum: Gender, required: false, default: Gender.Other })
+  @IsEnum(Gender)
+  gender: Gender;
+
+  @ApiProperty({ enum: Role, required: false })
+  @IsEnum(Status)
+  @IsOptional()
+  status: Status;
+
+  @ApiProperty({ enum: Role, required: false })
+  @IsEnum(Role)
+  @IsOptional()
+  role: Role;
 }

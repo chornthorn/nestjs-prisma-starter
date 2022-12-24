@@ -1,26 +1,67 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  // use api prefix for all routes
-  app.setGlobalPrefix('api');
-  // enable cors for all clients
-  app.enableCors({
-    origin: '*',
-  });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true, // Transform the payload to the DTO instance
-      whitelist: true, // Remove extra properties from the payload
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
-  app.useGlobalFilters(new HttpExceptionFilter());
-  await app.listen(process.env.APP_PORT || 3000); // default port to 3000
+  app.setGlobalPrefix('api');
+  // enable cors
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
+  });
+
+  // serve static files
+  app.useStaticAssets(join(__dirname, '..', 'docs'));
+
+  // versioning
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
+
+  const config = new DocumentBuilder()
+    .setTitle('Room Booking API')
+    .setDescription('The Room Booking API for how to consume API')
+    .setVersion('1.0')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      description: 'JWT access token',
+    })
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        description: 'JWT refresh token',
+      },
+      'bearer-refresh',
+    )
+    .setContact(
+      'CHORN Thorn',
+      'https://github.com/chornthorn',
+      'chornthorn.kh@gmail.com',
+    )
+    .setExternalDoc('How Application work?', 'http://localhost:3050/index.html')
+    .addServer('http://localhost:3050')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  await app.listen(3000);
 }
 
-bootstrap().then(() =>
-  console.log(`Server is running on port ${process.env.APP_PORT}`),
-);
+bootstrap().then(() => console.log('Server started'));

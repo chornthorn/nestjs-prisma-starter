@@ -1,54 +1,49 @@
 import {
-  Body,
   Controller,
-  HttpCode,
-  HttpStatus,
   Post,
+  Body,
   UseGuards,
   UseInterceptors,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
+import { Public } from '../common/decorators/public.decorator';
+import { CurrentUserId } from '../common/decorators/current-user-id.decorator';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { SignUpDto } from './dto/sign-up.dto';
 import { TransformInterceptor } from '../common/interceptors/transform.interceptor';
-import { Public } from '../common/decorators/public.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { RefreshGuard } from './guards/refresh.guard';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('auth')
+@ApiTags('Authentications')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @HttpCode(HttpStatus.OK)
   @UseInterceptors(TransformInterceptor)
+  @HttpCode(HttpStatus.OK)
   @Post('sign-in')
-  async signIn(@Body() signInDto: SignInDto) {
+  signIn(@Body() signInDto: SignInDto) {
     return this.authService.signIn(signInDto);
   }
 
   @Public()
-  @HttpCode(HttpStatus.OK)
   @UseInterceptors(TransformInterceptor)
   @Post('sign-up')
-  async signUp(@Body() signUpDto: SignUpDto) {
+  signUp(@Body() signUpDto: SignUpDto) {
     return this.authService.signUp(signUpDto);
   }
 
-  // refresh token
   @Public()
-  @UseGuards(RefreshGuard)
-  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer-refresh')
+  @UseGuards(JwtRefreshGuard)
   @UseInterceptors(TransformInterceptor)
+  @HttpCode(HttpStatus.OK)
   @Post('refresh-token')
-  async refreshToken(@CurrentUser() user) {
-    return this.authService.refreshToken(user.username);
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(TransformInterceptor)
-  @Post('logout')
-  async logout(@CurrentUser() user) {
-    return 'Logout successfully';
+  refreshToken(@CurrentUserId() userId: string) {
+    console.log('userId', userId);
+    return this.authService.refreshToken(userId);
   }
 }

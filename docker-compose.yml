@@ -2,72 +2,108 @@ version: "3.9"
 
 # The services of nestjs application build with dockerfile
 services:
-  app:
+  nest_app:
     build:
       context: .
       dockerfile: Dockerfile
-      # only will be build development stage
-      # target: development
-    container_name: kun5g-app
-    # mount the source code to container
-    # mount current directory to /usr/src/app
-    # reflect the changes in the source code to the container
+      target: development
+    command: npm run start:debug
+    container_name: nestjs-starter-app
+    depends_on:
+      - postgresql-master
+      - postgresql-slave
     volumes:
       - .:/usr/src/app
-    #      - ./node_modules:/usr/src/app/node_modules
+      # copy file from container to host on path ./node_modules/.prisma/client
+      - ./node_modules/.prisma/client:/usr/src/app/node_modules/.prisma/client
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - PORT=3000
+      - NODE_ENV=${NODE_ENV}
       - DATABASE_URL=${DATABASE_URL}
-    depends_on:
-      - db
+    ports:
+      - "${PORT}:3000"
+      # debug port
+      - "9229:9229"
     networks:
       - app-network
 
-  db:
-    image: postgres:15
-    container_name: kun5g-db
+  web_server:
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    depends_on:
+      - nest_app
+      - postgresql-master
+      - postgresql-slave
     ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
+      - "9000:80"
+    networks:
+      - app-network
+
+  postgresql-master:
+    image: docker.io/bitnami/postgresql:14
+    platform: linux/amd64
+    ports:
+      - '${POSTGRES_PORT}:5432'
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - 'postgresql_master_data:/bitnami/postgresql'
+    env_file:
+      - .env
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_USERNAME=${POSTGRES_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB}
+      # - ALLOW_EMPTY_PASSWORD=yes
     networks:
       - app-network
 
-  # database pgadmin
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: kun5g-pgadmin
+  postgresql-slave:
+    image: docker.io/bitnami/postgresql:14
+    platform: linux/amd64
+    env_file:
+      - .env
     ports:
-      - "5050:80"
+      - '${POSTGRES_SLAVE_PORT}:5432'
     depends_on:
-      - db
+      - postgresql-master
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=postgresql-master
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      # - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - app-network
+
+  pgadmin:
+    image: dpage/pgadmin4:6.18
+    depends_on:
+      - postgresql-master
+      - postgresql-slave
+    ports:
+      - '5050:80'
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 'admin@admin.com'
+      PGADMIN_DEFAULT_PASSWORD: secret
+      PGADMIN_LISTEN_PORT: 80
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     networks:
       - app-network
 
 volumes:
-  db-data:  # volume for database data
+  postgresql_master_data:
+    driver: local
+  pgadmin_data:
 
+# gateway-network
 networks:
-  app-network:  # network for app and db
-
-# Now, we can run the docker-compose command to start the application.
-# docker-compose up -d --build
-# docker-compose down -v
-# rebuild the docker image
-# docker-compose up -d --build --force-recreate
-
-# rebuild by deleting the old image and creating a new one
-# docker-compose up -d --build --force-recreate --no-cache
-
-
-# run migration command in docker container
-# docker-compose exec app npm run typeorm:run-migrations
-
+  app-network:

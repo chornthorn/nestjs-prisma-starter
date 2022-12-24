@@ -1,37 +1,38 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SignInDto } from './dto/sign-in.dto';
-import { SignUpDto } from './dto/sign-up.dto';
-import { UtilityHelper } from '../common/utilities/utility.helper';
 import { JwtService } from '@nestjs/jwt';
-import { CreateTokenDto } from './dto/create-token.dto';
-import { AuthTokenDto } from './dto/auth-token.dto';
+import { UsersService } from '../users/users.service';
+import { SignUpDto } from './dto/sign-up.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
   ) {}
 
-  async validateUser(username: string, pass: string): Promise<any> {
+  async validateUser(username: string, password: string) {
     const user = await this.usersService.findOneByUsername(username);
 
-    if (!user) {
-      throw new BadRequestException('Invalid username or password');
+    if (!user || user.password !== password) {
+      throw new BadRequestException('Invalid credentials');
     }
 
-    const isPasswordValid = await UtilityHelper.compareString(
-      pass,
-      user.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new BadRequestException('Invalid username or password');
-    }
-
-    const { password, ...result } = user;
-    return result;
+    return user;
+  }
+  // generate jwt token
+  async generateToken(user: any) {
+    const payload = { username: user.username, sub: user.id };
+    return {
+      accessToken: this.jwtService.sign(payload, {
+        secret: 'secret',
+        expiresIn: '1h',
+      }),
+      refreshToken: this.jwtService.sign(payload, {
+        secret: 'secret-refresh',
+        expiresIn: '1w',
+      }),
+    };
   }
 
   async signIn(signInDto: SignInDto) {
@@ -40,87 +41,27 @@ export class AuthService {
       signInDto.password,
     );
     if (!user) {
-      throw new BadRequestException('Invalid username or password');
+      throw new BadRequestException('Invalid credentials');
     }
-    const { password, ...result } = user;
-
-    const token = await this.generateToken({
-      username: result.username,
-      userId: result.id,
-      role: result.role,
-    });
-
-    if (!token) {
-      throw new BadRequestException('Token not generated');
-    }
-
-    return token;
+    return this.generateToken(user);
   }
 
   async signUp(signUpDto: SignUpDto) {
-    const passwordHash = UtilityHelper.hasString(signUpDto.password);
-
-    if (!passwordHash) {
-      throw new BadRequestException('Password not hashed');
+    // find user by username
+    const user = await this.usersService.findOneByUsername(signUpDto.username);
+    if (user) {
+      throw new BadRequestException('Username already exists');
     }
-
-    const user = await this.usersService.create({
-      username: signUpDto.username,
-      password: await passwordHash,
-      firstName: signUpDto.firstName,
-      lastName: signUpDto.lastName,
-    });
-    if (!user) {
-      return null;
-    }
-    return user;
+    const userEntity = await this.usersService.create(signUpDto);
+    return this.generateToken(userEntity);
   }
 
   // refresh token
-  public async refreshToken(username: string): Promise<AuthTokenDto | null> {
-    const user = await this.usersService.findOneByUsername(username);
-
+  async refreshToken(userId: string) {
+    const user = await this.usersService.findOne(userId);
     if (!user) {
-      throw new BadRequestException('Invalid refresh token');
+      throw new BadRequestException('User not found');
     }
-
-    return await this.generateToken({
-      username: user.username,
-      userId: user.id,
-      role: user.role,
-    });
-  }
-
-  public async generateToken(
-    createToken: CreateTokenDto,
-  ): Promise<AuthTokenDto> {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(
-        {
-          user: {
-            ...createToken,
-          },
-        },
-        {
-          secret: 'access-token-secret',
-          expiresIn: 60 * 60 * 24 * 7, //1 week
-        },
-      ),
-      this.jwtService.signAsync(
-        {
-          user: {
-            ...createToken,
-          },
-        },
-        {
-          secret: 'refresh-token-secret',
-          expiresIn: 60 * 60 * 24 * 7, //  1 week
-        },
-      ),
-    ]);
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return this.generateToken(user);
   }
 }

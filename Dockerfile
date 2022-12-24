@@ -1,8 +1,9 @@
-# pull node 17 image for creating two stage of app
-FROM node:17 AS development
+# pull node 16 image for creating two stage of app
+FROM node:18 AS development
 
 #FROM alpine as development
 #RUN apk add nodejs npm python3 openssl build-base
+RUN apt-get update && apt-get install -y openssl libssl-dev
 
 # set node environment to production
 ARG NODE_ENV=development
@@ -21,11 +22,14 @@ RUN npm install
 # copy all files
 COPY . .
 
+# run generate prisma
+RUN npm run generate
+
 #build app
 RUN npm run build
 
 # build another image named production
-FROM node:17 as production
+FROM node:18 as production
 
 # set node environment to production
 ARG NODE_ENV=production
@@ -42,36 +46,4 @@ EXPOSE 3000
 
 # start app
 CMD ["node", "dist/main"]
-
-# list all of commands for building and running the app
-# docker build -t nestjs-docker .
-# docker run -p 3000:3000 nestjs-docker
-
-# list all of commands for building and running the app with docker-compose
-# docker-compose up --build
-
-# list all of commands for building and running the app with docker-compose in detached mode
-# docker-compose up --build -d
-
-# list all of commands for building and running the app with docker-compose in detached mode and remove containers after exit
-# docker-compose up --build -d --remove-orphans
-
-# list all of commands for building and running the app with docker-compose in detached mode and remove containers after exit and rebuild images
-# docker-compose up --build -d --remove-orphans --force-recreate
-
-
-# # production stage
-# FROM nginx:stable-alpine AS production
-
-# # copy build from development stage
-# COPY --from=development /app/dist /usr/share/nginx/html
-
-# # expose port 80
-# EXPOSE 80
-
-# # run nginx
-# CMD ["nginx", "-g", "daemon off;"]
-
-# build image
-# docker
 
